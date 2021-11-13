@@ -1,4 +1,4 @@
 # zoombuddy
-app to determine abn track ip connection suitability for teleconferencing
+app to determine and track ip connection suitability for teleconferencing
 
 wip
