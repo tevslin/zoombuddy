@@ -11,10 +11,17 @@ from tkinter import ttk
 import numpy as np
 import time
 
+def circlist(thelist,theitem,maxlength):
+    #adds theitem to the bottom of thelist and pops the top if maxlength exceeded
+    thelist.append(theitem)
+    if len(thelist)> maxlength:
+        thelist.pop(0)
+        
 def goodresult(curtask,index,ms):
     curtask["lastgood"]=time.time()
     curtask['conseq']+=1
     curtask['results'].append({"time":curtask['lastgood'],"index":index,"ms":ms}) #put it on the list
+    circlist(curtask["results"],{"time":curtask['lastgood'],"index":index,"ms":ms},curtask['resultlim'])
 
     
     
@@ -22,9 +29,9 @@ def goodresult(curtask,index,ms):
 def do_ping(curtask,index):
     import subprocess
     
-    pingmin=3
-    latencymin=20
-    pingmax=latencymin
+    pingmin=4
+    jittermin=10
+    
     
     glop=subprocess.run("ping "+curtask['script'][index]+' -n 1 -w '+str(curtask['timeout']),capture_output=True)
     if glop.returncode==0:  #if it succeeded
@@ -40,13 +47,19 @@ def do_ping(curtask,index):
         assert len(thetime)>0, 'cant find time'
         ms=int(thetime)
         goodresult(curtask,index,ms)
-        if curtask['conseq']>=pingmin: #temporary criteria
-            relresults=curtask["results"][-len(curtask["script"]):]
+        if len(curtask['results'])>=pingmin: #if have enough samples
+            relresults=curtask["results"][-pingmin:]
             curtask["display"].set("{:4.1f}".format(np.mean([res['ms'] for res in relresults])))
-            if len(curtask["results"])>=latencymin:  #if enough results for latency
-                relresults=curtask["results"][-latencymin:]
-        if len(curtask["results"])>pingmax:
-            curtask["results"].pop(0)
+            
+        # now work on jitter
+           
+            circlist(pingqs[index],ms,jittermin+1) #put the time at the bottom of the q
+            if len(pingqs[index])>1: # if there's anything else on the list
+                pingqs[index][-2]=abs(pingqs[index][-2]-pingqs[index][-1]) #turn it into jitter
+                jit=np.mean([np.median(q) for q in pingqs[:-1] if len(q)==jittermin+1])
+                if not np.isnan(jit): #if enough to calculate
+                    jitter.set("{:4.1f}".format(jit))
+
                     
         
     print("results",glop) #debugging
@@ -63,8 +76,7 @@ def maketaskarray(tasklist):  #formats script of tasks to run and results array 
 
 def checkstatus():
     global doafter
-    
-    print ("checkstatus called")
+
     if killsw:  #if we're done
         return #return without rescheduling
     if not pausesw: # if not paused
@@ -77,6 +89,8 @@ def checkstatus():
                 thequeue.append(thequeue.pop(0)) #move to back of queue
                 break
     doafter=root.after(100,checkstatus) #set next iteration
+    
+#button processor
             
 def killall(): #action for quit button
     global killsw
@@ -101,9 +115,10 @@ def pausetoggle():  #action for pause button
 # initialization
 
 pingtasks=[('8.8.8.8',1),('1.1.1.1',1),('208.67.222.222',1)] #locations to ping and weighting
+pingqs=[[] for i in range(len(pingtasks))]
 
 
-pingdict={"task":do_ping,"interval":1,"timeout":300,"label":"latency in ms","results":[],"conseq":0}  # will come from preferences
+pingdict={"task":do_ping,"interval":1,"timeout":300,"label":"latency in ms","results":[],"conseq":0,"resultlim":12}  # will come from preferences
 pingdict["script"]=maketaskarray(pingtasks) #add scripts and output array
 featuredict={'ping':pingdict}    #will add at least speedtest and monitor
 
@@ -116,9 +131,6 @@ buttonignore=True #because buttons call their code during setup
 doafter=None #pending doafter
 killsw=False
 pausesw=False
-
-    
-
 
 
 
@@ -135,7 +147,7 @@ for feature,value in featuredict.items(): #add an output line for each row
     value["widget"]=display    
     display.grid(column=1,row=row)
     row+=1
-ttk.Label(frm,text="jitter in ms").grid(column=0, row=row)
+ttk.Label(frm,text="jitter in ms:").grid(column=0, row=row)
 jitter=StringVar()
 jitter.set('N/A')
 ttk.Label(frm,textvariable=jitter).grid(column=1, row=row)
