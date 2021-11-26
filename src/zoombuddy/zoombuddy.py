@@ -10,34 +10,55 @@ from tkinter import ttk
 
 import numpy as np
 import time
+import operator
 import warnings
 warnings.filterwarnings("ignore")
-
 import ping3
 ping3.EXCEPTIONS = True
+from cloudflarepycli import cloudflareclass
 
 ######## Note ping3 does not work in user mode in rasperian
     
-for dns in ['8.8.8.8','1.1.1.1','208.67.222.222']:
-    msg=''
-    try:
-        resp=ping3.ping(dns,unit='ms',timeout=.3)
-        msg=str(round(resp))
-    except ping3.errors.HostUnknown:
-        msg='host unknown'
-    except ping3.errors.Timeout:        
-        msg='timeout'
-    except ping3.errors.PingError:
-        msg='unknown error'
-
-class avgobj:
-    def __init__(self):
-        self.count=0
-        self.total=0
-    def updateavg(self,newvalue):
+class statusblock:  #keeps track of a performance dimension
+    lastvalue=-1
+    lasttime=-1
+    lastlevel=-1
+    total=0
+    count=0
+    maxi=0
+    mini=0
+    q=[]
+    #stype=np.dtype([('time',np.float),('level',np.int16)])  
+    def __init__(self,theop,duration=0,levels=()):
+        self.theop=theop
+        self.levels=levels
+        self.duration=duration
+       
+    def updateavg(self,value):
+        now=time.time()
+        nochange=value==self.lastvalue
+        self.lastvalue=value
+        self.lasttime=now
+        self.total+=value
         self.count+=1
-        self.total+=newvalue
-        return "{:5.2f}".format(self.total/self.count)
+        self.maxi=max(self.maxi,value)
+        self.mini=min(self.mini,value)
+        if self.duration>0: #if we're doing an interval
+            if nochange:    #if there hasn't been a change
+                self.q.pop(-1) #get rid of redundant entry
+            self.q.append((value,now))                          
+            while self.q[0][1]-now>self.duration:   #pop old entries
+                self.q.pop(0)
+        if not nochange: 
+            updatestatus()
+        return (self.total/self.count)
+    def getlevel(self,value): #get the level for a value
+        for i,lim in enumerate(self.levels):
+            if self.theop(value,lim):            
+                return len(self.levels)-i
+        return(0)   #lowest level if not found
+            
+      
         
 
 class mainwindow:
@@ -46,6 +67,7 @@ class mainwindow:
         self.root = tk.Tk()
         self.root.title(title)
         self.frm = ttk.Frame(self.root, padding=10)
+        self.canvas=tk.Canvas(self.root)
         self.row=-1 #current row
         self.column=0 #current column
         self.callafter=callafter
@@ -53,18 +75,18 @@ class mainwindow:
         self.doingafter=None
         self.dict={}
         
-    def addpair(self,label,vname,vinit='N/A',newrow=True):
+    def addpair(self,label,vname=None,vinit='N/A',newrow=True):
         
         if newrow:
             self.row+=1
             self.column=0      
-        ttk.Label (self.root,text=label).grid(column=self.column,row=self.row)
+        ttk.Label (self.frm,text=label).grid(column=self.column,row=self.row,sticky='e')
         if vname is None: #if just another constant
-            ttk.Label (self.root,text=vinit).grid(column=self.column+1,row=self.row)
+            ttk.Label (self.frm,text=vinit).grid(column=self.column+1,row=self.row)
         else:
             strvar=tk.StringVar(self.root,vinit,name=vname)
             self.dict[vname]=strvar
-            ttk.Label(self.root,textvariable=strvar).grid(column=self.column+1,row=self.row)
+            ttk.Label(self.frm,textvariable=strvar).grid(column=self.column+1,row=self.row)
         self.column+=2
         
     def addbutton(self,vinit,command,vname=None,newrow=True,column=None):      
@@ -75,11 +97,11 @@ class mainwindow:
         if not column is None: #if clomn specified
             self.column=column
         if vname is None: #if not variable text
-            ttk.Button(self.root,text=vinit,command=command).grid(column=self.column,row=self.row)
+            ttk.Button(self.frm,text=vinit,command=command).grid(column=self.column,row=self.row)
         else:
             strvar=tk.StringVar(self.root,vinit)
             self.dict[vname]=strvar
-            ttk.Button(self.root,textvariable=strvar,command=command).grid(column=self.column,row=self.row)
+            ttk.Button(self.frm,textvariable=strvar,command=command).grid(column=self.column,row=self.row)
         self.column+=1
         
     def doafter(self):
@@ -112,13 +134,31 @@ def goodresult(curtask,index,ms):
     curtask['results'].append({"time":curtask['lastgood'],"index":index,"ms":ms}) #put it on the list
     circlist(curtask["results"],{"time":curtask['lastgood'],"index":index,"ms":ms},curtask['resultlim'])
 
+def updatestatus(): #updates color bar and message
+    colorset=('red','yellow','green')
+    textset=('not zoomready','iffy','zoomready')
+    if failstart>0: #if in failure
+        color="red"
+        thetext='no connection'
+        minstatus=0
+    else:
+        minstatus=np.min([block.getlevel(block.lastvalue) for block in statusgroup if block.count>0])
+        color=colorset[minstatus]
+        thetext=textset[minstatus]
+        if possfailstart>0: #if in a glitch
+            thetext+='-glitch' #should do something with color
+    curstat.configure(text=thetext,background=color)
+    avgstatus.updateavg(minstatus)
+    minstatus=int(np.min([item[0] for item in avgstatus.q]))
+    hourstat.configure(text=textset[minstatus],background=colorset[minstatus])
+    
+    
+    
     
     
     
 def do_ping(curtask,index):
-    import subprocess
-   
-    
+      
     pingmin=4
     jittermin=10
     pingfailmax=5 #seconds until failure declared
@@ -139,27 +179,22 @@ def do_ping(curtask,index):
         returncode=2
     except ping3.errors.PingError:
         returncode=3
+    except:
+        returncode=99
     #glop=subprocess.run("ping "+curtask['script'][index]+' -n 1 -w '+str(curtask['timeout']),capture_output=True, shell=True)
     if returncode==0:  #if it succeeded
+        possfailstart=0
         if failstart>0: #if we were in a failure
             mw.setvar("duration",getduration(failstart))
-            mw.setvar("avgduration",avgduration.updateavg(time.time()-failstart))
+            mw.setvar("avgduration","{:5.2f}".format(avgduration.updateavg(time.time()-failstart)))
             failstart=0 #we're not failing any more
+            
             lastfailend=time.time()
             
         if lastfailend>0:
             x=getduration(lastfailend)
             mw.setvar("lastfail",x)        
-    
-        #lines=glop.stdout.decode().splitlines()
-        #thetime=''
-        #for line in lines:
-            #ix=line.find('time')
-            #if ix>=0:   #if this line has time
-                #pline=line[ix+5:] #get the line starting at number
-                #ix=pline.find('ms')
-                #if ix>0:    #if end found
-                    #thetime=pline[:ix]
+
         if ms>0:   #if could find time  
            # ms=int(thetime)
             goodresult(curtask,index,ms)
@@ -167,18 +202,21 @@ def do_ping(curtask,index):
                 relresults=curtask["results"][-pingmin:]
                 x=np.mean([res['ms'] for res in relresults])
                 mw.setvar('latency',"{:4.1f}".format(x))
-                mw.setvar('avglatency',avglatency.updateavg(x))
+                mw.setvar('avglatency',"{:5.2f}".format(avglatency.updateavg(x)))
+                
+                
             # now work on jitter
                
                 circlist(pingqs[index],ms,jittermin+1) #put the time at the bottom of the q
                 if len(pingqs[index])>1: # if there's anything else on the list
                     pingqs[index][-2]=abs(pingqs[index][-2]-pingqs[index][-1]) #turn it into jitter
-                    jit=np.mean([np.median(q) for q in pingqs[:-1] if len(q)>=2])
+                    jit=np.mean([np.median(q) for q in pingqs[:-1] if len(q)>=5])
                     if not np.isnan(jit): #if enough to calculate
                         mw.setvar("jitter","{:4.1f}".format(jit))
-                        mw.setvar("avgjitter",avgjitter.updateavg(jit))
+                        mw.setvar("avgjitter","{:5.2f}".format(avgjitter.updateavg(jit)))
                     
     else:   #if ping failed
+        print ('ping fail',index,time.time())
     # at some point must show failure cause somewhere. skipping for now
         if curtask['conseq']>0: #if last did not fail       
             curtask['conseq']=0 #break the string
@@ -187,15 +225,39 @@ def do_ping(curtask,index):
         #print('fail length',faillength)
         if pingfailmax<faillength: #if we reached limit of our patience
             if not failstart>0: #if not already in outage
+                print ('now in outage')
                 failstart=possfailstart
+                
                 mw.setvar("lastfail",'now')
                 failcount+=1
                 mw.setvar("failcount",failcount)
             else:
                 mw.setvar("duration",getduration(failstart))
+        updatestatus()
+    return(True) #always advance index
                 
         
-    #print("results",glop) #debugging
+def dospeed(curtask,index):
+    #performs speedtests
+    if curtask['direction']=='up':
+        results=cf.upload(curtask['script'][index],1)
+        if results is None:  #allowing for bug in cloudflarecli
+            results=()
+    else:   #for download
+        fulltimes,servertimes,requesttimes=cf.download(curtask['script'][index],1)
+        results=fulltimes=np.subtract(fulltimes,requesttimes)
+    if len(results)==0: #if it failed
+        return(False)
+    curtask['speeds'][index]=curtask['script'][index]*8/results[0] #update the results array
+    if curtask['initializing']: #if still in itialization
+        if index==len(curtask['speeds'])-1:  #if just filled last bucket
+            curtask['initializing']=False #turn off iniialization
+    if not curtask['initializing']: #if not in itialization
+        speed=round(np.percentile(curtask['speeds'],thepercentile)/1e6,2)
+        mw.setvar('speed'+curtask['direction'],str(speed))
+    return(True)
+    
+
     
 
 
@@ -204,7 +266,24 @@ def maketaskarray(tasklist):  #formats script of tasks to run and results array 
     for task in tasklist: #make the script
         for i in range(task[1]): #for weighting
             script.append(task[0])
-    return script  
+    return script
+
+def makespeeddict(functasks,direction):
+    #makes dictionary defining a speed test function
+    dict={}
+    dict['script']=maketaskarray(functasks)
+    dict['speeds']=np.zeros(len(dict['script']))
+    dict['task']=dospeed
+    dict['interval']=speedtestinterval*60/len(dict['script'])
+    dict['results']=[]
+    dict['resultlim']=12
+    dict["conseq"]=0
+    dict['lastgood']=time.time()
+    dict["direction"]=direction
+    dict["initializing"]=True
+    return dict
+    
+    
        
 
 def checkstatus():
@@ -214,13 +293,15 @@ def checkstatus():
         return #return without rescheduling
     if not pausesw: # if not paused
         for task in thequeue: #loop thru the queue
-            if task["last"]+task['interval']<=time.time(): #if due to run
-                curtask=featuredict[task["name"]] #get full feature record
-                curtask["task"](curtask,task["index"]) #call the task
-                task["last"]=time.time() #remember when
-                task["index"]=(task["index"]+1)%len(curtask["script"]) #update index
-                thequeue.append(thequeue.pop(0)) #move to back of queue
-                break
+            curtask=featuredict[task["name"]] #get full feature record
+            if possfailstart>0 or \
+              (task["last"]+(1 if curtask['initializing'] else task['interval'])<=time.time()): #if due to run
+                if (possfailstart==0) or (task['name']=='ping'): #only ping runs during failure - may use an attribute instead                  
+                    if curtask["task"](curtask,task["index"]): #call the task and advanc index if it wants
+                        task["index"]=(task["index"]+1)%len(curtask["script"]) #update index
+                    task["last"]=time.time() #remember when               
+                    thequeue.append(thequeue.pop(0)) #move to back of queue
+                    break
     mw.doafter() #set next iteration
     
 #button processor
@@ -247,20 +328,8 @@ def pausetoggle():  #action for pause button
 
 # initialization
 
-pingtasks=[('8.8.8.8',1),('1.1.1.1',1),('208.67.222.222',1)] #locations to ping and weighting
-pingqs=[[] for i in range(len(pingtasks))]
-
-
-pingdict={"task":do_ping,"interval":1,"timeout":1,"label":"latency in ms","results":[],"conseq":0,"resultlim":12,
-          "lastgood":time.time()}  # will come from preferences
-pingdict["script"]=maketaskarray(pingtasks) #add scripts and output array
-featuredict={'ping':pingdict}    #will add at least speedtest and monitor
-
-thequeue=[] #revolving q of tasks to schedule
-for feature, dictionary in featuredict.items():    #create a queue and thread for each feature
-    thequeue.append({"name":feature,"interval":dictionary["interval"],"last":0,"index":0})
-        
-
+speedtestinterval=15  #should come from preferance. time in minutes for full set of type of speedtest
+thepercentile=90
 
 doafter=None #pending doafter
 killsw=False
@@ -269,14 +338,41 @@ failstart= 0 #any nonzero value means failure underway. blocks execution of nonp
 possfailstart=0 #time of last test if it failed
 failcount=0
 lastfailend=0
-avgduration=avgobj()
-avglatency=avgobj()
-avgjitter=avgobj()
+hourstat=0
+avgduration=statusblock(theop=operator.lt)
+avglatency=statusblock(theop=operator.lt,levels=(75,100))
+avgjitter=statusblock(theop=operator.lt,levels=(8,15))
+avgdown=statusblock(theop=operator.gt,levels=(5,2))
+avgup=statusblock(theop=operator.gt,levels=(3,1))
+statusgroup=(avglatency,avgjitter,avgdown,avgup)
+
+avgstatus=statusblock(theop=operator.le,levels=(5,3,2,1),duration=3600)
+cf =cloudflareclass.cloudflare(printit=False)
+colo,ip=cf.getcolo()
+isp=cf.getisp(ip) #get the name of the isp
+
+pingtasks=[('8.8.8.8',1),('1.1.1.1',1),('208.67.222.222',1)] #locations to ping and weighting
+pingqs=[[] for i in range(len(pingtasks))]
 
 
+pingdict={"task":do_ping,"interval":1,"timeout":.200,"results":[],"conseq":0,"resultlim":12,
+          "lastgood":time.time(),"initializing":True}  # will come from preferences
+pingdict["script"]=maketaskarray(pingtasks) #add scripts and output array
+featuredict={'ping':pingdict,"speeddown":makespeeddict(cf.downloadtests,'down'),'speedup':makespeeddict(cf.uploadtests,'up')}    
 
+thequeue=[] #revolving q of tasks to schedule
+for feature, dictionary in featuredict.items():    #create a queue and thread for each feature
+    thequeue.append({"name":feature,"interval":dictionary["interval"],"last":0,"index":0})
+
+
+        
+    
 buttonignore=True #because buttons call their code during setup     
 mw=mainwindow(checkstatus,200)   #create the window
+
+mw.addpair('started ',vinit=time.asctime())
+mw.addpair('ISP:',"isp",vinit=isp)
+mw.addpair("IP address","IP",vinit=ip)
 mw.addpair('time since failure:','lastfail')
 mw.addpair('failure count:','failcount',vinit=str(0),newrow=False)
 mw.addpair('last failure duration:','duration')
@@ -285,11 +381,22 @@ mw.addpair ('current latency in ms:',"latency")
 mw.addpair ("average:","avglatency",newrow=False)
 mw.addpair ('current jitter in ms:',"jitter")
 mw.addpair ("average:","avgjitter",newrow=False)
+mw.addpair("speed down in Mbps:","speeddown")
+mw.addpair ("speed up:","speedup",newrow=False)
 mw.addbutton("Pause",pausetoggle,vname="pausebutton")
 mw.addbutton("Quit",killall,newrow=False,column=3)
- 
+ttk.Label (mw.canvas,text='current status').grid(column=0)
+ttk.Label(mw.canvas,text='last hour minimum status').grid(row=0,column=3,sticky="e")
+curstat=ttk.Label(mw.canvas,text='N/A')
+curstat.grid(row=1,column=0)
+hourstat=ttk.Label(mw.canvas,text='N/A')
+hourstat.grid(row=1,column=3)
+
+
+mw.canvas.grid(rowspan=4)
+mw.frm.grid()
 
 buttonignore=False #now buttons are good to go
 mw.doafter()
 mw.mainloop()
-print('goodby')
+print('goodbye')
