@@ -1,7 +1,7 @@
 # zoombuddy
-Beta release of free app to determine and track the quaklity of your internet connection on a contiuous basis, especially the connection's suitability for teleconferencing. 
+Beta release of free app to determine and track the quality of your internet connection on a continuous basis, especially the connection's suitability for teleconferencing. 
 
-##Uses
+## Uses
 1. determine whether it is your connection or someone elses which is causing freezes and disconnects
 2. measure whether your Internet Service Provider (ISP) is delivering the level of service you were promised including peak periods
 3. find which rooms in your house have the best WiFi connections
