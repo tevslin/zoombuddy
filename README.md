@@ -32,6 +32,8 @@ Use File Explorer to navigate to whereever you saved zoombuddy.exe during downlo
 
 Bring the window to the front whenever you want to see the current state of your connection.
 
+***Caution: Zoombuddy sends test packets. It shoud NOT be run continuosly on a metered connection.
+
 ### Pause/Resume
 
 The Pause button causes zoombuddy to stop testing your connection. If your connection is iffy but you want to continue your teleconference, you may want to pause zoombuddy so that its test packets don't compete with your conference for bandwidth which is in short supply. Click Resume to restart monitoring.
@@ -39,4 +41,26 @@ The Pause button causes zoombuddy to stop testing your connection. If your conne
 ### Quit
 
 Click the Quit button.
+
+## How it works
+
+Tests for latency are done by sending ping packets to Google, Cloudflare, and OpenDNS. This is a good selection for testing in the US but may not be in other places. Currently this slection cannot be changed. Eventually there will be an opportunity to set preferances. Zoombuddy makes Python requests to various subaddresses of [speed.cloudflare.com](https://speed.cloudflare.com). Their API is not documented, as far as I know; and so that is a vulnerability for this code. There is also a request to [ipdatabase.com](http://www.ipdatabase.com/ip) and the return is screen-scraped for your actual ISP name.
+
+Mirroring the performance of the Cloudflare webpage, the CLI does multiple uploads and downloads with different block sizes and the 90th percentile of all these tests is used for calculating up and download times. Results are similar to those obtained from the webpage.
+
+Unlike Ookla's speedtest CLI, Cloudflare does not require downloading a licensed exe. Cloudflare uses test sites from its own network of cacheing and hosting centers. This is useful because much of the content users would be retrieving is actually coming from these centers. On the other hand, coverage may be thin in some parts of the world.
+
+## Privacy
+
+No identifying information is sent to any website other than the IP address which servers can see in an HTTP request. Cloudflare can propbably deduce something from the tests it runs ands Google, Cloudflare, and OpenDNS will know from where (but not from whom) they are being pinged. No results are sent anywhere. Because this an application and not running in a browser, there are no cookies.
+
+## Background
+
+Teleconferecning, as with Zoom, is an essential part of modern American life. It's needed not only for work from home but also for remote shooling and telemedicine. We  ahve have a need to know which connections we can use foe teleconferencing. Moreover, billions of federal dollars are being disbursed to improve broadband availability and quality, especially in rural areas. Tools are needed to assure that ISPs deliver the quality they promise. This software is a pro bono contribution to getting those tools written. 
+
+## Disclaimers
+
+No claims of any sort are made for this software. It has been lightly tested on Windows 10. Use and/or redistribute solely at your own risk. No commitemnt is made to maintain this software. As noted above, changes made by Clouflare or ipdatabase.com might breeak the functionality.
+
+I have no affiliation with Cloudflare, Zoom, any teleconferencing or hosting service, or any ISP (except as a customer).
 
