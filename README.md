@@ -12,15 +12,31 @@ Designed to be run continuously to monitor the quality of your Internet coonnect
 
 ## Installation
 
-###Windows
+### Windows
 
 To download the Windows executable, click [here](https://github.com/tevslin/zoombuddy/raw/main/zoombuddy.exe). You may have to contend with virus blockers or Windows itself warning that the software is from an unknown publisher (me). The software has only been tested on Windows 10.
 
-###Mac and Linux
+### Mac and Linux
 
 There are currently no Linux or Mac versions. 
 
-###Python source
+## Python source
 
-The Python source is availablr from this Github repository. 
+The Python source is available from [this Github repository](https://github.com/tevslin/zoombuddy). It is not yet on PyPi.
+
+## Use - Windows only
+
+### Startup
+
+Use File Explorer to navigate to whereever you saved zoombuddy.exe during download and double click on the program or right click and select open. There is no need to run as administrator. Note that zoombuddy is currently very slow to start running; be patient. If you don't see its window afetr a while, look for a feather icon (temporary) in the taskbar and click it to bring the window to the front. It will be running and monitoring whether it is the front window or not.
+
+Bring the winndow to the front when you want to see the current state of your connection.
+
+### Pause/Resume
+
+The Pause button causes zoombuddy to stop testing your connection. If yor connection is marginal but you want to continue your teleconference, you may want to pause zoombuddy so that its test packets don't compete with your cinference for bandwidth which is in short supply.Click Resume to start monitoring.
+
+### Quit
+
+Click the Quit button.
 
