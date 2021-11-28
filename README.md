@@ -34,7 +34,7 @@ Bring the winndow to the front when you want to see the current state of your co
 
 ### Pause/Resume
 
-The Pause button causes zoombuddy to stop testing your connection. If yor connection is marginal but you want to continue your teleconference, you may want to pause zoombuddy so that its test packets don't compete with your cinference for bandwidth which is in short supply.Click Resume to start monitoring.
+The Pause button causes zoombuddy to stop testing your connection. If yor connection is marginal but you want to continue your teleconference, you may want to pause zoombuddy so that its test packets don't compete with your conference for bandwidth which is in short supply. Click Resume to start monitoring.
 
 ### Quit
 
