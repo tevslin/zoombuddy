@@ -6,3 +6,5 @@ Designed to be run continuously to monitor the quality of your Internet coonnect
 
 ## Installation
 
+To download the Windows executable, click [here](https://github.com/tevslin/zoombuddy/raw/main/zoombuddy.exe). There are currently no Linux and Mac versions. The Python source is availablr from a Github repository at 
+
