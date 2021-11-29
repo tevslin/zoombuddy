@@ -52,11 +52,11 @@ Unlike Ookla's speedtest CLI, Cloudflare does not require downloading a licensed
 
 ## Privacy
 
-No identifying information is sent to any website other than the IP address which servers can see in an HTTP request. Cloudflare can propbably deduce something from the tests it runs ands Google, Cloudflare, and OpenDNS will know from where (but not from whom) they are being pinged. No results are sent anywhere. Because this an application and not running in a browser, there are no cookies.
+No identifying information is sent to any website other than the IP address which servers can see in an HTTP request. Cloudflare can probably deduce something from the tests it runs ands Google, Cloudflare, and OpenDNS will know from where (but not from whom) they are being pinged. No results are sent anywhere. Because this an application and not running in a browser, there are no cookies.
 
 ## Background
 
-Teleconferecning, as with Zoom, is an essential part of modern American life. It's needed not only for work from home but also for remote shooling and telemedicine. We  ahve have a need to know which connections we can use foe teleconferencing. Moreover, billions of federal dollars are being disbursed to improve broadband availability and quality, especially in rural areas. Tools are needed to assure that ISPs deliver the quality they promise. This software is a pro bono contribution to getting those tools written. 
+Teleconferencing, as with Zoom, is an essential part of modern American life. It's needed not only for work from home but also for remote schooling and telemedicine. We have a need to know which connections we can use for teleconferencing. Moreover, billions of federal dollars are being disbursed to improve broadband availability and quality, especially in rural areas. Tools are needed to assure that ISPs deliver the quality they promise. This software is a pro bono contribution to getting those tools written. 
 
 ## Disclaimers
 
