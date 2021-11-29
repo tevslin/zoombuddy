@@ -44,7 +44,7 @@ Click the Quit button.
 
 ## How it works
 
-Tests for latency are done by sending ping packets to Google, Cloudflare, and OpenDNS. This is a good selection for testing in the US but may not be in other places. Currently this slection cannot be changed. Eventually there will be an opportunity to set preferances. Zoombuddy makes Python requests to various subaddresses of [speed.cloudflare.com](https://speed.cloudflare.com). Their API is not documented, as far as I know; and so that is a vulnerability for this code. There is also a request to [ipdatabase.com](http://www.ipdatabase.com/ip) and the return is screen-scraped for your actual ISP name.
+Tests for latency are done by sending ping packets to Google, Cloudflare, and OpenDNS. This is a good selection for testing in the US but may not be in other places. Currently this selection cannot be changed. Eventually there will be an opportunity to set preferances. Zoombuddy makes Python requests to various subaddresses of [speed.cloudflare.com](https://speed.cloudflare.com). Their API is not documented, as far as I know; and so that is a vulnerability for this code. There is also a request to [ipdatabase.com](http://www.ipdatabase.com/ip) and the return is screen-scraped for your actual ISP name.
 
 Mirroring the performance of the Cloudflare webpage, the CLI does multiple uploads and downloads with different block sizes and the 90th percentile of all these tests is used for calculating up and download times. Results are similar to those obtained from the webpage.
 
