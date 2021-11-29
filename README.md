@@ -28,7 +28,7 @@ The Python source is available from [this Github repository](https://github.com/
 
 ### Startup
 
-Use File Explorer to navigate to whereever you saved zoombuddy.exe during download and double click on the program or right click and select open. There is no need to run as administrator. Note that zoombuddy is currently very slow to start running; be patient. If you don't see its window afetr a while, look for a feather icon (temporary) in the taskbar and click it to bring the window to the front. It will be running and monitoring whether it is the front window or not.
+Use File Explorer to navigate to whereever you saved zoombuddy.exe during download and double click on the program or right click and select open. There is no need to run as administrator. Note that zoombuddy is currently very slow to start running; be patient. If you don't see its window after a while, look for a feather icon (temporary) in the taskbar and click it to bring the window to the front. It will be running and monitoring whether it is the front window or not.
 
 Bring the window to the front whenever you want to see the current state of your connection.
 
