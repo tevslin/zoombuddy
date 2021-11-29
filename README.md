@@ -32,7 +32,7 @@ Use File Explorer to navigate to whereever you saved zoombuddy.exe during downlo
 
 Bring the window to the front whenever you want to see the current state of your connection.
 
-***Caution: Zoombuddy sends test packets. It shoud NOT be run continuosly on a metered connection.
+***Caution: Zoombuddy sends test packets. It shoud NOT be run continuously on a metered connection.
 
 ### Pause/Resume
 
